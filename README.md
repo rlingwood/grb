@@ -1,2 +1,2 @@
-gamma ray bursts
-bottom text
+# gamma ray bursts
+# bottom text
