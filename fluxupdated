@@ -1,9 +1,11 @@
+# add beta to this (cf fluxcontinuous3.py), add for loops, start plotting input ebv against output ebv
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 # wavelengths
-wavelength = np.arange(1500, 10000, 100) # range of wavelengths (angstrom)
+wavelength = np.arange(1500*10**(-10), 10000*10**(-10), 100*10**(-10)) # range of wavelengths (meters)
 class parameters: # define a set of parameters for the curve
     def __init__(self, a, b, lam, n):
         self.a = a
@@ -19,8 +21,24 @@ fii = parameters(0.002, -1.95, 9.7, 2.0) # parameters for 9.7 micrometer feature
 fiii = parameters(0.002, -1.8, 18.0, 2.0) # parameters for 18 micrometer feature
 fir = parameters(0.012, 0.0, 25.0, 2.0) # parameters for FIR
 
+# LMG parameters
+lmgbkg = parameters(175.0, 90.0, 0.046, 2.0) # parameters for BKG
+lmgfuv = parameters(19.0, 5.5, 0.08, 4.5) # parameters for FUV
+lmgfi = parameters(0.023, -1.95, 0.22, 2.0) # parameters for 2175 angstrom feature
+lmgfii = parameters(0.005, -1.95, 9.7, 2.0) # parameters for 9.7 micrometer feature
+lmgfiii = parameters(0.006, -1.8, 18.0, 2.0) # parameters for 18 micrometer feature
+lmgfir = parameters(0.02, 0.0, 25.0, 2.0) # parameters for FIR
+
+# SMG parameters
+smgbkg = parameters(185.0, 90.0, 0.042, 2.0) # parameters for BKG
+smgfuv = parameters(27.0, 5.5, 0.08, 4.0) # parameters for FUV
+smgfi = parameters(0.005, -1.95, 0.22, 2.0) # parameters for 2175 angstrom feature
+smgfii = parameters(0.01, -1.95, 9.7, 2.0) # parameters for 9.7 micrometer feature
+smgfiii = parameters(0.012, -1.8, 18.0, 2.0) # parameters for 18 micrometer feature
+smgfir = parameters(0.03, 0.0, 25.0, 2.0) # parameters for FIR
+
 def term(wavelen, parameters): # a single term in the extinction curve equation
-    microns = wavelen*10**(-4) # convert angstrom values to microns
+    microns = wavelen*10**(6) # convert meter values to microns
     a = parameters.a
     b = parameters.b
     lam = parameters.lam
@@ -31,102 +49,96 @@ def term(wavelen, parameters): # a single term in the extinction curve equation
 def eta(wavelen):
     return term(wavelen, bkg) + term(wavelen, fuv) + term(wavelen, fi) + term(wavelen, fii)  + term(wavelen, fiii) + term(wavelen, fir)
 
-v = 5500
-rv = 3.08
-initialflux = 1
-beta = 1
+def etalmg(wavelen):
+    return term(wavelength, lmgbkg) + term(wavelength, lmgfuv) + term(wavelength, lmgfi) + term(wavelength, lmgfii)  + term(wavelength, lmgfiii) + term(wavelength, lmgfir)
 
-def flux(wavelength, ext, initialflux, beta):
+def etasmg(wavelen):
+    return term(wavelength, smgbkg) + term(wavelength, smgfuv) + term(wavelength, smgfi) + term(wavelength, smgfii)  + term(wavelength, smgfiii) + term(wavelength, smgfir)
+
+v = 5500*10**(-10)
+rv = 3.08
+scalefactor = 10**(11)
+err = 0.1
+
+def flux(wavelength, ext):
     av = rv*ext
     alambda = (eta(wavelength)/eta(v))*av
     tau = alambda/1.086
-    fzero = initialflux*(wavelength**beta)
-    flux = fzero*(np.e**(-1*tau))
-    fluxjy = flux*((wavelength)**2)*3.34*(10**(4))
-    return fluxjy
+    initialflux = wavelength
+    flux = initialflux*(np.e**(-1*tau))
+    return flux
 
-def addnoise(wavelength, ext, initialflux, beta):
-    flx = flux(wavelength, ext, initialflux, beta)
-    noise = np.random.normal(0, 0.005*(flx))
+def addnoise(wavelength, ext):
+    flx = flux(wavelength, ext)
+    noise = np.random.normal(0, err*flx)
     fluxwnoise = flx + noise
-    return fluxwnoise
+    fluxwnoisejy = fluxwnoise*((wavelength)**2)*3.34*(10**(4))
+    return fluxwnoisejy*scalefactor
 
 x = np.log10(1/wavelength)
-ynine = np.log10(addnoise(wavelength, 0.9, 1, 1))
-yeight = np.log10(addnoise(wavelength, 0.8, 1, 1))
-yseven = np.log10(addnoise(wavelength, 0.7, 1, 1))
-ysix = np.log10(addnoise(wavelength, 0.6, 1, 1))
-yfive = np.log10(addnoise(wavelength, 0.5, 1, 1))
-yfour = np.log10(addnoise(wavelength, 0.4, 1, 1))
-ythree = np.log10(addnoise(wavelength, 0.3, 1, 1))
-ytwo = np.log10(addnoise(wavelength, 0.2, 1, 1))
-yone = np.log10(addnoise(wavelength, 0.1, 1, 1))
-yzero = np.log10(addnoise(wavelength, 0.0, 1, 1))
+ynine = np.log10(addnoise(wavelength, 0.9))
+yeight = np.log10(addnoise(wavelength, 0.8))
+yseven = np.log10(addnoise(wavelength, 0.7))
+ysix = np.log10(addnoise(wavelength, 0.6))
+yfive = np.log10(addnoise(wavelength, 0.5))
+yfour = np.log10(addnoise(wavelength, 0.4))
+ythree = np.log10(addnoise(wavelength, 0.3))
+ytwo = np.log10(addnoise(wavelength, 0.2))
+yone = np.log10(addnoise(wavelength, 0.1))
+yzero = np.log10(addnoise(wavelength, 0.0))
 
-def model(wavelength, ext, initialflux, beta):
+def model(wavelength, ext, initialflux):
     modelav = rv*ext
-    modelalambda = (eta(wavelength)/eta(v))*modelav
-    modeltau = modelalambda/1.086
-    modelfzero = initialflux*(wavelength**beta)
-    modelflux = modelfzero*(np.e**(-1*modeltau))
+    modelambda = (eta(wavelength)/eta(v))*modelav
+    modeltau = modelambda/1.086
+    modelflux = initialflux*wavelength*(np.e**(-1*modeltau))
     modelfluxjansky = modelflux*((wavelength)**2)*3.34*(10**(4))
-    return modelfluxjansky
+    return modelfluxjansky*scalefactor
 
 # curve fitting
-paramnine, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.9, 1, 1))
+paramnine, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.9))
 print("Fitted value for E(B-V): ", round(paramnine[0],4)) 
 print("Fitted value for Initial Flux: ", round(paramnine[1],4)) 
-print("Fitted value for Beta: ", round(paramnine[2],4)) 
-
 print("") 
-parameight, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.8, 1, 1))
+parameight, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.8))
 print("Fitted value for E(B-V): ", round(parameight[0],4)) 
 print("Fitted value for Initial Flux: ", round(parameight[1],4)) 
-print("Fitted value for Beta: ", round(parameight[2],4)) 
 print("") 
-paramseven, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.7, 1, 1))
+paramseven, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.7))
 print("Fitted value for E(B-V): ", round(paramseven[0],4)) 
-print("Fitted value for Initial Flux: ", round(paramseven[1],4))
-print("Fitted value for Beta: ", round(paramseven[2],4))  
+print("Fitted value for Initial Flux: ", round(paramseven[1],4)) 
 print("") 
-paramsix, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.6, 1, 1))
+paramsix, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.6))
 print("Fitted value for E(B-V): ", round(paramsix[0],4)) 
 print("Fitted value for Initial Flux: ", round(paramsix[1],4)) 
-print("Fitted value for Beta: ", round(paramsix[2],4))  
 print("") 
-paramfive, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.5, 1, 1))
+paramfive, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.5))
 print("Fitted value for E(B-V): ", round(paramfive[0],4)) 
 print("Fitted value for Initial Flux: ", round(paramfive[1],4)) 
-print("Fitted value for Beta: ", round(paramfive[2],4))  
 print("") 
-paramfour, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.4, 1, 1))
+paramfour, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.4))
 print("Fitted value for E(B-V): ", round(paramfour[0],4)) 
 print("Fitted value for Initial Flux: ", round(paramfour[1],4)) 
-print("Fitted value for Beta: ", round(paramfour[2],4))  
 print("")
-paramthree, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.3, 1, 1))
+paramthree, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.3))
 print("Fitted value for E(B-V): ", round(paramthree[0],4)) 
 print("Fitted value for Initial Flux: ", round(paramthree[1],4))
-print("Fitted value for Beta: ", round(paramthree[2],4))  
 print("") 
-paramtwo, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.2, 1, 1))
+paramtwo, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.2))
 print("Fitted value for E(B-V): ", round(paramtwo[0],4)) 
 print("Fitted value for Initial Flux: ", round(paramtwo[1],4)) 
-print("Fitted value for Beta: ", round(paramtwo[2],4))  
 print("")
-paramone, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.1, 1, 1))
+paramone, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.1))
 print("Fitted value for E(B-V): ", round(paramone[0],4)) 
 print("Fitted value for Initial Flux: ", round(paramone[1],4)) 
-print("Fitted value for Beta: ", round(paramone[2],4))  
 print("")
-paramzero, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.0, 1, 1))
+paramzero, param_cov = curve_fit(model, wavelength, addnoise(wavelength, 0.0))
 print("Fitted value for E(B-V): ", round(paramzero[0],4)) 
 print("Fitted value for Initial Flux: ", round(paramzero[1],4)) 
-print("Fitted value for Beta: ", round(paramzero[2],4))  
 
 # plot
 fig, ax = plt.subplots(figsize=(8, 6))
-norm = plt.Normalize(np.log10(1/(7500)), np.log10(1/(3800)))
+norm = plt.Normalize(np.log10(1/(7500*10**(-10))), np.log10(1/(3800*10**(-10))))
 plt.scatter(x, ynine, s=10, c=x, cmap='nipy_spectral_r', norm=norm)
 plt.scatter(x, yeight, s=10, c=x, cmap='nipy_spectral_r', norm=norm)
 plt.scatter(x, yseven, s=10, c=x, cmap='nipy_spectral_r', norm=norm)
@@ -140,32 +152,33 @@ plt.scatter(x, yzero, s=10, c=x, cmap='nipy_spectral_r', norm=norm)
 
 def fit(param):
     fittedextinction = param[0]
-    fittedinitialflux = param[1]
-    fittedbeta = param[2]
     fittedav = rv*fittedextinction
     fittedalambda = (eta(wavelength)/eta(v))*fittedav
     fittedtau = fittedalambda/1.086
-    fittedfzero = fittedinitialflux*(wavelength**fittedbeta)
-    fittedflux = fittedfzero*(np.e**(-1*fittedtau))
+    initialflux = param[1]*wavelength
+    fittedflux = initialflux*(np.e**(-1*fittedtau))
     fittedfluxjansky = fittedflux*((wavelength)**2)*3.34*(10**(4))
-    return fittedfluxjansky
+    return fittedfluxjansky*scalefactor
 
-plt.errorbar(x, np.log10(fit(paramnine)), yerr = np.log10(np.sqrt(ynine)), c = 'k', lw = 0.1)
-plt.errorbar(x, np.log10(fit(parameight)), yerr = np.log10(np.sqrt(yeight)), c = 'k', lw = 0.1)
-plt.errorbar(x, np.log10(fit(paramseven)), yerr = np.log10(np.sqrt(yseven)), c = 'k', lw = 0.1)
-plt.errorbar(x, np.log10(fit(paramsix)), yerr = np.log10(np.sqrt(ysix)), c = 'k', lw = 0.1)
-plt.errorbar(x, np.log10(fit(paramfive)), yerr = np.log10(np.sqrt(yfive)), c = 'k', lw = 0.1)
-plt.errorbar(x, np.log10(fit(paramfour)), yerr = np.log10(np.sqrt(yfour)), c = 'k', lw = 0.1)
-plt.errorbar(x, np.log10(fit(paramthree)), yerr = np.log10(np.sqrt(ythree)), c = 'k', lw = 0.1)
-plt.errorbar(x, np.log10(fit(paramtwo)), yerr = np.log10(np.sqrt(ytwo)), c = 'k', lw = 0.1)
-plt.errorbar(x, np.log10(fit(paramone)), yerr = np.log10(np.sqrt(yone)), c = 'k', lw = 0.1)
-plt.errorbar(x, np.log10(fit(paramzero)), yerr = np.log10(np.sqrt(yzero)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(paramnine)), yerr = abs(err*(ynine)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(parameight)), yerr = abs(err*(yeight)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(paramseven)), yerr = abs(err*(yseven)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(paramsix)), yerr = abs(err*(ysix)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(paramfive)), yerr = abs(err*(yfive)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(paramfour)), yerr = abs(err*(yfour)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(paramthree)), yerr = abs(err*(ythree)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(paramtwo)), yerr = abs(err*(ytwo)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(paramone)), yerr = abs(err*(yone)), c = 'k', lw = 0.1)
+plt.errorbar(x, np.log10(fit(paramzero)), yerr = abs(err*(yzero)), c = 'k', lw = 0.1)
 
 # axis labels and formatting
 ax.set(title = "Flux for Milky Way",
-       xlabel = "log[1/λ] (Å)",
-       ylabel = "log[Flux]")
+       xlabel = "log[1/λ] (m)",
+       ylabel = "log[Flux] (Jy)")
 plt.rcParams['font.family'] = "serif"
+
+array = flux(wavelength, 0.0)
+array2 = addnoise(wavelength,0.0)
 
 # show plot
 plt.show()
