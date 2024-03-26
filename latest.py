@@ -131,17 +131,34 @@ ax.set(title = "Flux for Milky Way",
 plt.rcParams['font.family'] = "serif"
 
 
+
+# !!! curve fitting !!!
+
+def model(wavelength, ebv, beta):
+    modelav = rv*ebv
+    modelambda = (eta(wavelength, mw)/eta(v, mw))*modelav
+    modeltau = modelambda/1.086
+    initialflux = wavelength**beta
+    modelflux = initialflux*(np.e**(-1*modeltau))
+    return modelflux
+
+def fit(param):
+    fittedav = rv*param[0]
+    fittedalambda = (eta(optical, mw)/eta(v, mw))*fittedav
+    fittedtau = fittedalambda/1.086
+    initialflux = optical**param[1]
+    fittedflux = initialflux*(np.e**(-1*fittedtau))
+    return fittedflux
+
+
+
 # !!! combining the two !!!
 x = np.log10(1/wavelengths)
 
 for i in range(0, 11): # range of ebvs
     j = i/10
     yopt = np.log10(flux(optical, j, beta)) # plots optical
+    param, param_cov = curve_fit(model, optical, flux(optical, j, beta)) # optical curvefitting
     yxray = np.log10(xrayflux(xray, sigma)) # plots xray
     y = np.concatenate((yopt, yxray), axis=0) # combines the two
     plt.scatter(x, y, s=8, c=x, cmap='nipy_spectral_r', norm=norm)
-    
-    
-
-# !!! curve fitting !!!
-
