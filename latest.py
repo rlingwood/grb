@@ -150,6 +150,8 @@ def fit(param):
     fittedflux = initialflux*(np.e**(-1*fittedtau))
     return fittedflux
 
+outputebv = [] # array to store ebv values outputted by curve fitting
+
 
 
 # !!! combining the two !!!
@@ -159,6 +161,7 @@ for i in range(0, 11): # range of ebvs
     j = i/10
     yopt = np.log10(flux(optical, j, beta)) # plots optical
     param, param_cov = curve_fit(model, optical, flux(optical, j, beta)) # optical curvefitting
+    outputebv.append(param[0])
     yxray = np.log10(xrayflux(xray, sigma)) # plots xray
     y = np.concatenate((yopt, yxray), axis=0) # combines the two
     plt.scatter(x, y, s=8, c=x, cmap='nipy_spectral_r', norm=norm)
