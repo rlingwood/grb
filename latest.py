@@ -150,6 +150,12 @@ def fit(param):
     fittedflux = initialflux*(np.e**(-1*fittedtau))
     return fittedflux
 
+def xraymodel(x):
+    return 0
+
+def xrayfit(x):
+    return 0
+
 outputebv = [] # array to store ebv values outputted by curve fitting
 
 
