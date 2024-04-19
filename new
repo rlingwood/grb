@@ -173,6 +173,8 @@ for i in range(0, 11):
     opticalflux = opticalintrinsic*opticalattenuation(optical, j, mw, zhost)*opticalattenuation(optical, j, mw, zint)
     xrayflux = xrayintrinsic*xrayattenuation(xray, j, mw, zhost)*xrayattenuation(xray, j, mw, zint)
     flux = np.concatenate((opticalflux, xrayflux), axis=0)
+    flux = flux*(10**17)
+    flux = flux + np.random.normal(0, 3*np.sqrt(flux))
     x = np.log10(1/wavelengths)
     y = np.log10(flux)
     plt.scatter(x, y, s=3, c=x, cmap='nipy_spectral_r', norm=norm)
