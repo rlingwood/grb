@@ -8,7 +8,8 @@ h = 6.63*10**(-34) # planck constant
 ev = 1.6*10**(-19) # electron volt
 
 beta = 1 # instrinsic slope of flux
-v = 5500*10**(-10)
+zhost = 2 # redshift of host galaxy
+zint = 0.5 # redshift of intervener
 
 xray = np.arange(0.2, 10, 0.1) # xray energies in kev
 optical_ang = np.array([21705.5, 16468.4, 12399.2, 8989.6, 7640.7, 6219.8, 5468, 4586.9, 4392, 3465]) # optical wavelengths in angstrom
@@ -19,19 +20,12 @@ def remove(energy, z):
     energy = energy[shiftedenergy < 10]
     return energy
 
-xray = remove(xray, 2)
+xray = remove(xray, zhost) # remove xray energies that will be out of bounds once shifted
 
 def conv(e):
     # convert xray energies in kev to wavelengths in m
     m = e*1000*ev # convert kev to j
     return (h*c)/m
-
-def initialfluxoptical(wl):
-    return wl**beta
-
-def initialfluxxray(energy):
-    wl = conv(energy)
-    return wl**beta
 
 
 
@@ -111,6 +105,7 @@ def opticalattenuation(wl, ext, gal, z):
     shiftedwavelength = wl/(1+z)
     # then calucate tau for each (blueshifted) wavelength data point:
     av = gal.rv*ext
+    v = 5500*10**(-10)
     alambda = (eta(shiftedwavelength, gal)/eta(v, gal))*av
     tau = alambda/1.086
     # and return e to the power of -tau:
@@ -138,7 +133,7 @@ Ca = xsections['CaI']*10.**(ISMabund['Ca']-12)#*beta['Ca']
 keV = xsections['Energy']/1000.
 totsigma = (H+He+C+O+Fe+Ne+Mg+Si+S+Ar+Ca)
 
-def attenuation(e):
+def attenuation(e): # find sigma for a given xray energy
      dE = 0.1
      index = np.where((keV<e+dE) & (keV>e))
      s = totsigma[index[0]]
@@ -167,19 +162,17 @@ plt.rcParams['font.family'] = "serif"
 
 # !!! plotting !!!!
 
-line = np.log10(1/(6525*10**(-10)))
-
 wavelengths = np.concatenate((optical, conv(xray)), axis=0)
 
-opticalintrinsic = initialfluxoptical(optical)
-xrayintrinsic = initialfluxxray(xray)
+opticalintrinsic = optical**beta
+xrayintrinsic = (conv(xray))**beta
 intrinsic = np.concatenate((opticalintrinsic, xrayintrinsic), axis=0)
 
-opticalflux = opticalintrinsic*opticalattenuation(optical, 0.9, mw, 2)*opticalattenuation(optical, 0.9, mw, 0.5)
-xrayflux = xrayintrinsic*xrayattenuation(xray, 0.9, mw, 2)*xrayattenuation(xray, 0.9, mw, 0.5)
-flux = np.concatenate((opticalflux, xrayflux), axis=0)
-
-x = np.log10(1/wavelengths)
-y = np.log10(flux)
-plt.scatter(x, y, s=8, c=x, cmap='nipy_spectral_r', norm=norm)
-plt.axvline(x=line, color='black', linewidth=0.5, ls='dotted')
+for i in range(0, 11):
+    j = i/10
+    opticalflux = opticalintrinsic*opticalattenuation(optical, j, mw, zhost)*opticalattenuation(optical, j, mw, zint)
+    xrayflux = xrayintrinsic*xrayattenuation(xray, j, mw, zhost)*xrayattenuation(xray, j, mw, zint)
+    flux = np.concatenate((opticalflux, xrayflux), axis=0)
+    x = np.log10(1/wavelengths)
+    y = np.log10(flux)
+    plt.scatter(x, y, s=3, c=x, cmap='nipy_spectral_r', norm=norm)
