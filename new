@@ -175,12 +175,8 @@ opticalintrinsic = initialfluxoptical(optical)
 xrayintrinsic = initialfluxxray(xray)
 intrinsic = np.concatenate((opticalintrinsic, xrayintrinsic), axis=0)
 
-opticalflux = opticalintrinsic*opticalattenuation(optical, 0.9, mw, 2)
-xrayflux = xrayintrinsic*xrayattenuation(xray, 0.9, mw, 2)
-flux = np.concatenate((opticalflux, xrayflux), axis=0)
-
-opticalflux = opticalflux*opticalattenuation(optical, 0.9, mw, 0.5)
-xrayflux = xrayflux*xrayattenuation(xray, 0.9, mw, 0.5)
+opticalflux = opticalintrinsic*opticalattenuation(optical, 0.9, mw, 2)*opticalattenuation(optical, 0.9, mw, 0.5)
+xrayflux = xrayintrinsic*xrayattenuation(xray, 0.9, mw, 2)*xrayattenuation(xray, 0.9, mw, 0.5)
 flux = np.concatenate((opticalflux, xrayflux), axis=0)
 
 x = np.log10(1/wavelengths)
