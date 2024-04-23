@@ -12,7 +12,7 @@ beta = 1 # instrinsic slope of flux
 zhost = 2 # redshift of host galaxy
 zint = 0.5 # redshift of intervener
 
-xray = np.arange(0.2, 10, 0.1) # xray energies in kev
+xray = np.arange(0.3, 10, 0.1) # xray energies in kev
 optical_ang = np.array([21705.5, 16468.4, 12399.2, 8989.6, 7640.7, 6219.8, 5468, 4586.9, 4392, 3465]) # optical wavelengths in angstrom
 optical = optical_ang*10**(-10) # optical wavelengths in m
 
@@ -179,10 +179,38 @@ def xraymodel(energy, ext):
     return intrinsic*atten
 
 def fittedoptical(param):
-    return 0 
+    z = zhost
+    galaxy = mw
+    intrinsic = optical**beta
+    shiftedwavelength = optical/(1+z)
+    fittedav = galaxy.rv*param[0]
+    v = 5500*10**(-10)
+    fittedalambda = (eta(shiftedwavelength, galaxy)/eta(v, galaxy))*fittedav
+    fittedtau = fittedalambda/1.086
+    fittedatten = np.e**(-1*fittedtau)
+    return intrinsic*fittedatten
 
 def fittedxray(param):
-    return 0
+    z = zhost
+    galaxy = mw
+    intrinsic = (conv(xray))**beta
+    shiftedenergy = xray*(1+z)
+    length = len(xray)
+    sigma = np.zeros(length)
+    for n, e in enumerate(shiftedenergy): 
+        sigma[n] = attenuation(e)
+    fittednh = galaxy.rv*galaxy.ratio*param[0]
+    fittedatten = np.e**(-1*sigma*fittednh)
+    return intrinsic*fittedatten
+
+def chi(model, data, err):
+    sum = 0
+    n = 0
+    while n < len(model):
+        sum = sum + ((model[n]-data[n])/(err*data[n]))**2
+        n = n + 1
+    dof = len(model) - 1
+    return sum/dof
 
 
 
@@ -205,12 +233,21 @@ opticalintrinsic = optical**beta
 xrayintrinsic = (conv(xray))**beta
 intrinsic = np.concatenate((opticalintrinsic, xrayintrinsic), axis=0)
 
-for i in range(0, 10):
+outputebv = []
+outputebvx = []
+outputchi = []
+outputchix = []
+
+for i in range(0, 11):
     j = i/10
     opticalflux = opticalintrinsic*opticalattenuation(optical, j, galaxy, zhost)*opticalattenuation(optical, j, galaxy, zint)
     xrayflux = xrayintrinsic*xrayattenuation(xray, j, galaxy, zhost)*xrayattenuation(xray, j, galaxy, zint)
+    param, param_cov = curve_fit(opticalmodel, optical, opticalflux)
+    paramx, paramx_cov = curve_fit(xraymodel, xray, xrayflux)
+    outputebv.append(param[0])
+    outputebvx.append(paramx[0])
     flux = np.concatenate((opticalflux, xrayflux), axis=0)
-    flux = flux*(10**15)
+    flux = flux*(10**16)
     flux = flux + np.random.normal(0, 3*np.sqrt(flux))
     x = np.log10(1/wavelengths)
     y = np.log10(flux)
