@@ -150,7 +150,7 @@ def host(op, xr, gal, z):
     cxrayhost = xrayfunc(xr, gal, z)
     return np.concatenate((copthost, cxrayhost), axis=0)
 
-chost = host(optical, xray, lmc, zhost)
+chost = host(optical, xray, smc, zhost)
 
 def attenhost(ebv):
     return np.e**(-1*chost*ebv)
@@ -166,7 +166,7 @@ def attenint(ebv):
     return np.e**(-1*cint*ebv)
 
 hostebv = 0.1
-intebv = 0.5
+intebv = 1
 chis = np.zeros(10)
 ebvs = np.zeros(10)
 
@@ -206,14 +206,15 @@ while(times < 10):
     hostebv = hostebv + 0.1
     times = times + 1
     
-colors = [(0, 'limegreen'), (2 / chis.max(), 'limegreen'), (2 / chis.max(), 'red'), (1, 'red')]
+colors = [(0, 'yellowgreen'), (2 / chis.max(), 'yellowgreen'), (2 / chis.max(), 'crimson'), (1, 'crimson')]
 cmap = LinearSegmentedColormap.from_list('custom_cmap', colors)
+plt.rcParams.update({'font.size': 18})
 
-fig, ax = plt.subplots(figsize=(10, 6))
+fig, ax = plt.subplots(figsize=(10, 8))
 x = np.arange(0.1, 1.1, 0.1)
-plt.scatter(x, ebvs, c=chis, s=3, cmap=cmap)
+plt.scatter(x, ebvs, c=chis, s=25, cmap=cmap)
 plt.colorbar()
 plt.plot(x, x, c = 'k', lw = 1)
-ax.set(title = "Comparison of Input/Output Host EBV: Intervener EBV = 0.5, MW/MW",
+ax.set(title = "Intervener EBV = 1.0, SMC/MW",
        xlabel = "Input Host EBV",
        ylabel = "Calculated Host EBV")
